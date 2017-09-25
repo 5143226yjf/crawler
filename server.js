@@ -4,84 +4,38 @@
 'use strict';
 
 var http = require('http');
-var fs = require('fs');
-var cheerio = require('cheerio');
+var express = require('express');
+var app = express();
 var request = require('request');
+var cheerio = require('cheerio');
+var url = 'http://www.toutiao.com/i6465822406278660621/?tt_from=copy_link&utm_campaign=client_share&app=news_article&utm_source=copy_link&iid=14753739459&utm_medium=toutiao_ios';
 
-var i = 0;
-var url = "http://www.ss.pku.edu.cn/index.php/newscenter/news/2391";
-
-function fetchPage(x) {
-    startRequest(x);
-}
-
-function startRequest(x){
-    //向服务器发起一次get请求
-    http.get(x,(res)=>{
-        var html = '';
-        var title = [];
-        res.setEncoding('utf-8');
-        //监听data事件，每次取一块数据
-        res.on('data',(chunk)=>{
-            html += chunk;
+// 使用jQuery语法
+app.get('/', function(req, res) {
+    request(url, function(error, response, body) {
+       if (!error && response.statusCode == 200) {
+        var $ = cheerio.load(body);
+        var data = $('.article-title');
+        var content = [];
+        $('.article-content div p').each(function () {
+            content.push($(this).html());
         });
-        res.on('end',()=>{
-           var $ =cheerio.load(html);
-            var time =$('.article-info a:first-child').next().text().trim();
-            var news_item ={
-                title:$('div.article-title a').text().trim(),
-                Time:time,
-                link:"http://www.ss.pku.edu.cn" + $("div.article-title a").attr('href'),
-                author:$('[title=供稿]').text().trim(),
-                i:i=i+1,
-            };
-            console.log(news_item);
-            var news_title = $('div.article-title a').text().trim();
-            saveContent($,news_title);
-            saveImg($,news_title);
-
-            var nextLink='http://www.ss.pku.edu.cn'+$('li.next a').attr('href');
-            var str1 = nextLink.split('-'); //去掉url后的中文
-            var str =encodeURI(str1[0]);
-            if(i<=10){
-                fetchPage(str);
-            }
+        var sub = [];
+        $('.original').nextAll().each(function () {
+            sub.push($(this).text());
         });
-    }).on('error',(err)=>{
-        console.log(err);
-    });
-}
-
-function saveContent($,news_title) {
-    $('.article-content p').each(()=>{
-        var x = $(this).text();
-        var y = x.substring(0,2).trim();
-        if(y == ''){
-            x= x+ '\n';
-            fs.appendFile('./data/',news_title, '---'+'utf-8',(error)=>{
-                if(error){
-                    console.log(error);
-                }
-            })
-        }
-    })
-}
-
-function saveImg($,news_title) {
-    $('.article-content img').each(()=>{
-      var img_title = $(this).parent().next().text().trim();
-        if(img_title.length>35||img_title == ''){
-            img_title = 'Null';
-        }
-        var img_filename = img_title+ '.jpg';
-        var img_src = 'http://www.ss.pku.edu.cn'+$(this).attr('src');
-        request.head(img_src,(err)=>{
-            if(err){
-                console.log(err);
-            }
-            request(img_src).pipe(fs.createWriteStream('./image/'+news_title+ '---' + img_filename));
-
-        })
-    })
-}
-fetchPage(url);
+        console.log(sub)
+        console.log($('.article-sub').length)
+        res.json({
+             title: data.text(),
+             orgin: $('.original').text(),
+             author:  sub[0],
+             time: sub[1],
+             content: content
+        });
+       }
+     })
+   });
+   var server = app.listen(3007, function() {
+    console.log('listening at 3007');
+  });
