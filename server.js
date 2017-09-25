@@ -18,14 +18,12 @@ app.get('/', function(req, res) {
         var data = $('.article-title');
         var content = [];
         $('.article-content div p').each(function () {
-            content.push($(this).html());
+            content.push($(this).text());
         });
         var sub = [];
         $('.original').nextAll().each(function () {
             sub.push($(this).text());
         });
-        console.log(sub)
-        console.log($('.article-sub').length)
         res.json({
              title: data.text(),
              orgin: $('.original').text(),
